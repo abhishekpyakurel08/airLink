@@ -2,13 +2,21 @@ declare module 'express' {
   const express: any;
   export default express;
   export const Router: any;
-  export type Request = any;
-  export type Response = any;
 }
 
 declare module 'cors' {
   const cors: any;
   export default cors;
+}
+
+declare module 'cookie-parser' {
+  const cookieParser: any;
+  export default cookieParser;
+}
+
+declare module 'morgan' {
+  const morgan: any;
+  export default morgan;
 }
 
 declare module 'dotenv' {
@@ -20,7 +28,6 @@ declare module 'mongoose' {
   const mongoose: any;
   export default mongoose;
   export const Schema: any;
-  export type Document = any;
 }
 
 declare module 'ioredis' {

@@ -1,15 +1,13 @@
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
 import { PairingService } from '../services/pairingService';
 
 const router = Router();
 
-// Health check endpoint
-router.get('/health', (req: Request, res: Response) => {
+router.get('/health', (req: any, res: any) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Extension requests QR code pairing session
-router.post('/pairing/init', async (req: Request, res: Response) => {
+router.post('/pairing/init', async (req: any, res: any) => {
   try {
     const { extensionDeviceId, serverUrl } = req.body;
     if (!extensionDeviceId) {
@@ -29,8 +27,7 @@ router.post('/pairing/init', async (req: Request, res: Response) => {
   }
 });
 
-// Mobile app confirms QR pairing
-router.post('/pairing/confirm', async (req: Request, res: Response) => {
+router.post('/pairing/confirm', async (req: any, res: any) => {
   try {
     const { sessionToken, mobileDeviceId } = req.body;
     if (!sessionToken || !mobileDeviceId) {
