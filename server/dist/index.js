@@ -1,30 +1,35 @@
-import http from 'http';
-import express from 'express';
-import cors from 'cors';
-import cookieParser from 'cookie-parser';
-import morgan from 'morgan';
-import dotenv from 'dotenv';
-import { connectMongo, initRedis } from './config/db';
-import pairingRoutes from './routes/pairingRoutes';
-import { setupWebSocketServer } from './websocket/wsHandler';
-dotenv.config();
-const app = express();
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const http_1 = __importDefault(require("http"));
+const express_1 = __importDefault(require("express"));
+const cors_1 = __importDefault(require("cors"));
+const cookie_parser_1 = __importDefault(require("cookie-parser"));
+const morgan_1 = __importDefault(require("morgan"));
+const dotenv_1 = __importDefault(require("dotenv"));
+const db_1 = require("./config/db");
+const pairingRoutes_1 = __importDefault(require("./routes/pairingRoutes"));
+const wsHandler_1 = require("./websocket/wsHandler");
+dotenv_1.default.config();
+const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
 const COOKIE_SECRET = process.env.COOKIE_SECRET || 'airlink_secret_key';
-app.use(cors());
-app.use(morgan('dev'));
-app.use(cookieParser(COOKIE_SECRET));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use((0, cors_1.default)());
+app.use((0, morgan_1.default)('dev'));
+app.use((0, cookie_parser_1.default)(COOKIE_SECRET));
+app.use(express_1.default.json());
+app.use(express_1.default.urlencoded({ extended: true }));
 // Attach REST routes
-app.use('/api', pairingRoutes);
-const server = http.createServer(app);
+app.use('/api', pairingRoutes_1.default);
+const server = http_1.default.createServer(app);
 // Initialize WebSocket server
-setupWebSocketServer(server);
+(0, wsHandler_1.setupWebSocketServer)(server);
 // Start server and initialize databases
 async function startServer() {
-    await connectMongo();
-    initRedis();
+    await (0, db_1.connectMongo)();
+    (0, db_1.initRedis)();
     server.listen(PORT, () => {
         console.log(`=================================================`);
         console.log(`🚀 airLink Backend Server running on port ${PORT}`);

@@ -1,7 +1,7 @@
-import { handleMouseCommand } from './commands/mouse';
-import { handleKeyboardCommand } from './commands/keyboard';
-import { handleTabsCommand } from './commands/tabs';
-import { handleShortcutsCommand } from './commands/shortcuts';
+import { handleMouseCommand } from './commands/mouse.js';
+import { handleKeyboardCommand } from './commands/keyboard.js';
+import { handleTabsCommand } from './commands/tabs.js';
+import { handleShortcutsCommand } from './commands/shortcuts.js';
 const WS_URL = 'ws://localhost:3000/ws';
 let socket = null;
 let reconnectTimer = null;

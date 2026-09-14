@@ -1,20 +1,27 @@
-import mongoose from 'mongoose';
-import Redis from 'ioredis';
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.redisClient = void 0;
+exports.connectMongo = connectMongo;
+exports.initRedis = initRedis;
+const mongoose_1 = __importDefault(require("mongoose"));
+const ioredis_1 = __importDefault(require("ioredis"));
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/airlink';
 const REDIS_HOST = process.env.REDIS_HOST || '127.0.0.1';
 const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6379', 10);
-export let redisClient;
-export async function connectMongo() {
+async function connectMongo() {
     try {
-        await mongoose.connect(MONGO_URI);
+        await mongoose_1.default.connect(MONGO_URI);
         console.log(`[MongoDB] Connected successfully to ${MONGO_URI}`);
     }
     catch (err) {
         console.error('[MongoDB] Connection error:', err);
     }
 }
-export function initRedis() {
-    redisClient = new Redis({
+function initRedis() {
+    exports.redisClient = new ioredis_1.default({
         host: REDIS_HOST,
         port: REDIS_PORT,
         retryStrategy(times) {
@@ -23,14 +30,14 @@ export function initRedis() {
         },
         lazyConnect: true
     });
-    redisClient.on('connect', () => {
+    exports.redisClient.on('connect', () => {
         console.log(`[Redis] Connected successfully to ${REDIS_HOST}:${REDIS_PORT}`);
     });
-    redisClient.on('error', (err) => {
+    exports.redisClient.on('error', (err) => {
         console.error('[Redis] Connection error:', err);
     });
-    redisClient.connect().catch((err) => {
+    exports.redisClient.connect().catch((err) => {
         console.error('[Redis] Initial connect error:', err);
     });
-    return redisClient;
+    return exports.redisClient;
 }

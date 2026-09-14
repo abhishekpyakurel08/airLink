@@ -1,12 +1,14 @@
-import { drawQRCode } from '../utils/qr';
+import { drawQRCode } from '../utils/qr.js';
 
 const BACKEND_URL = 'http://localhost:3000';
 
-document.addEventListener('DOMContentLoaded', async () => {
+async function initPopup() {
   const canvas = document.getElementById('qr-canvas') as HTMLCanvasElement;
   const tokenDisplay = document.getElementById('token-display') as HTMLElement;
   const statusBadge = document.getElementById('status-badge') as HTMLElement;
   const btnRefresh = document.getElementById('btn-refresh') as HTMLButtonElement;
+
+  if (!canvas || !tokenDisplay || !statusBadge || !btnRefresh) return;
 
   const storage = await chrome.storage.local.get(['airlink_deviceId']);
   let deviceId = storage.airlink_deviceId;
@@ -22,26 +24,49 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function initPairing(extDeviceId: string) {
     try {
       statusBadge.textContent = 'Generating 60s Token...';
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+
       const resp = await fetch(`${BACKEND_URL}/api/pairing/init`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ extensionDeviceId: extDeviceId })
-      });
+        body: JSON.stringify({ extensionDeviceId: extDeviceId }),
+        signal: controller.signal
+      }).catch(() => null);
 
-      if (!resp.ok) throw new Error('Backend offline');
+      clearTimeout(timeoutId);
+
+      if (!resp || !resp.ok) {
+        statusBadge.textContent = 'Server Offline (Start server on :3000)';
+        statusBadge.style.backgroundColor = '#ef4444';
+        statusBadge.style.color = '#ffffff';
+        tokenDisplay.textContent = 'OFFLINE';
+        drawQRCode(canvas, 'airlink://pair/OFFLINE');
+        return;
+      }
 
       const data = await resp.json();
       tokenDisplay.textContent = data.code;
-      drawQRCode(canvas, data.qrPayload);
+      drawQRCode(canvas, data.qrPayload || `airlink://pair/${data.code}`);
 
       statusBadge.textContent = 'Scan QR or enter 6-char code';
-      statusBadge.className = 'status-badge status-pending';
+      statusBadge.style.backgroundColor = '#22c55e';
+      statusBadge.style.color = '#ffffff';
 
       await chrome.storage.local.set({ airlink_pendingCode: data.code });
     } catch (err: any) {
       statusBadge.textContent = 'Server Offline';
-      statusBadge.className = 'status-badge status-pending';
+      statusBadge.style.backgroundColor = '#ef4444';
+      statusBadge.style.color = '#ffffff';
       tokenDisplay.textContent = 'OFFLINE';
+      drawQRCode(canvas, 'airlink://pair/OFFLINE');
     }
   }
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initPopup);
+} else {
+  initPopup();
+}
