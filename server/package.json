@@ -1,5 +1,5 @@
 {
-  "name": "@airlink/server",
+  "name": "@airlink/server-legacy",
   "version": "1.0.0",
   "description": "airLink WebSocket and REST pairing server backed by MongoDB and Redis",
   "main": "dist/index.js",
@@ -9,7 +9,7 @@
     "dev": "tsc && node dist/index.js"
   },
   "dependencies": {
-    "@airlink/shared": "file:../shared",
+    "@airlink/shared": "workspace:*",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

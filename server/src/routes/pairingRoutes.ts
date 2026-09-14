@@ -3,42 +3,31 @@ import { PairingService } from '../services/pairingService';
 
 const router = Router();
 
-router.get('/health', (req: any, res: any) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
+// Extension requests 60s expiring QR pairing token
 router.post('/pairing/init', async (req: any, res: any) => {
   try {
-    const { extensionDeviceId, serverUrl } = req.body;
+    const { extensionDeviceId } = req.body;
     if (!extensionDeviceId) {
       return res.status(400).json({ error: 'extensionDeviceId is required' });
     }
-
-    const hostHeader = req.get('host') || 'localhost:3000';
-    const protocol = req.protocol === 'https' ? 'wss' : 'ws';
-    const defaultServerUrl = `${protocol}://${hostHeader}`;
-    const targetServerUrl = serverUrl || defaultServerUrl;
-
-    const result = await PairingService.initPairing(extensionDeviceId, targetServerUrl);
+    const result = await PairingService.generatePairingCode(extensionDeviceId);
     return res.json(result);
   } catch (err: any) {
-    console.error('[Pairing API Init Error]', err);
-    return res.status(500).json({ error: err.message || 'Failed to initialize pairing' });
+    return res.status(500).json({ error: err.message });
   }
 });
 
+// Phone scans QR code & confirms pairing in 1-second
 router.post('/pairing/confirm', async (req: any, res: any) => {
   try {
-    const { sessionToken, mobileDeviceId } = req.body;
-    if (!sessionToken || !mobileDeviceId) {
-      return res.status(400).json({ error: 'sessionToken and mobileDeviceId are required' });
+    const { code, phoneDeviceId } = req.body;
+    if (!code || !phoneDeviceId) {
+      return res.status(400).json({ error: 'code and phoneDeviceId are required' });
     }
-
-    const result = await PairingService.confirmPairing(sessionToken, mobileDeviceId);
+    const result = await PairingService.validateAndPair(code, phoneDeviceId);
     return res.json(result);
   } catch (err: any) {
-    console.error('[Pairing API Confirm Error]', err);
-    return res.status(400).json({ error: err.message || 'Failed to confirm pairing' });
+    return res.status(400).json({ error: err.message });
   }
 });
 

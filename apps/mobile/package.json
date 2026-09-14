@@ -7,7 +7,7 @@
     "start": "expo start"
   },
   "dependencies": {
-    "@airlink/shared": "file:../../packages/shared"
+    "@airlink/shared": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.3.3"

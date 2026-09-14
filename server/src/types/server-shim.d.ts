@@ -42,12 +42,14 @@ declare module 'ioredis' {
   export default Redis;
 }
 
-declare module 'uuid' {
-  export const v4: () => string;
+declare module 'crypto' {
+  export function createHash(algorithm: string): any;
+  export function randomBytes(size: number): any;
 }
 
 declare module 'ws' {
   export class WebSocketServer {
+    clients: Set<any>;
     constructor(options: any);
     on(event: string, callback: (ws: any) => void): void;
   }
@@ -57,6 +59,7 @@ declare module 'ws' {
     readyState: number;
     send(data: string): void;
     close(): void;
+    terminate(): void;
     on(event: string, callback: (...args: any[]) => void): void;
   }
   export default WebSocket;

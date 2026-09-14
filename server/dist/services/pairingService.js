@@ -1,85 +1,64 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PairingService = void 0;
-const uuid_1 = require("uuid");
-const db_1 = require("../config/db");
-const DevicePair_1 = require("../models/DevicePair");
-const PAIR_SESSION_TTL = 300; // 5 minutes
+const crypto_1 = __importDefault(require("crypto"));
+const PairingSession_1 = require("../models/PairingSession");
+const Session_1 = require("../models/Session");
+const EXPIRATION_SECONDS = 60; // Short-lived 60-second QR token for 1-second pairing
 class PairingService {
     /**
-     * Initializes a QR code pairing session for a Chrome Extension device
+     * Generates a short-lived ephemeral pairing session for Chrome Extension
      */
-    static async initPairing(extensionDeviceId, serverUrl) {
-        const pairId = (0, uuid_1.v4)();
-        const sessionToken = Math.random().toString(36).substring(2, 8).toUpperCase();
-        const pairSecret = (0, uuid_1.v4)();
-        const sessionData = {
-            pairId,
-            extensionDeviceId,
-            pairSecret
-        };
-        // Store ephemeral session in Redis with TTL
-        await db_1.redisClient.set(`pair_session:${sessionToken}`, JSON.stringify(sessionData), 'EX', PAIR_SESSION_TTL);
-        // Persist pending device pair entry in MongoDB
-        await DevicePair_1.DevicePair.create({
-            pairId,
-            extensionDeviceId,
-            pairSecret,
-            status: 'pending'
+    static async generatePairingCode(extensionDeviceId) {
+        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const codeHash = crypto_1.default.createHash('sha256').update(code).digest('hex');
+        const expiresAt = new Date(Date.now() + EXPIRATION_SECONDS * 1000);
+        await PairingSession_1.PairingSession.create({
+            code_hash: codeHash,
+            initiator_device: extensionDeviceId,
+            status: 'pending',
+            expires_at: expiresAt
         });
-        const qrPayload = JSON.stringify({
-            pairId,
-            sessionToken,
-            serverUrl
-        });
+        const qrPayload = `airlink://pair/${code}`;
         return {
-            sessionToken,
-            pairId,
+            code,
+            codeHash,
             qrPayload,
-            expiresInSeconds: PAIR_SESSION_TTL
+            expiresInSeconds: EXPIRATION_SECONDS
         };
     }
     /**
-     * Confirms pairing when mobile app scans QR code and sends sessionToken
+     * Validates pairing code sent from phone app and establishes device session
      */
-    static async confirmPairing(sessionToken, mobileDeviceId) {
-        const rawData = await db_1.redisClient.get(`pair_session:${sessionToken}`);
-        if (!rawData) {
-            throw new Error('Invalid or expired QR pairing session token');
+    static async validateAndPair(code, phoneDeviceId) {
+        const codeHash = crypto_1.default.createHash('sha256').update(code.trim().toUpperCase()).digest('hex');
+        const pairingDoc = await PairingSession_1.PairingSession.findOne({
+            code_hash: codeHash,
+            status: 'pending',
+            expires_at: { $gt: new Date() }
+        });
+        if (!pairingDoc) {
+            throw new Error('QR pairing code expired or invalid');
         }
-        const { pairId, extensionDeviceId, pairSecret } = JSON.parse(rawData);
-        // Update MongoDB status
-        const pair = await DevicePair_1.DevicePair.findOneAndUpdate({ pairId }, {
-            mobileDeviceId,
-            status: 'paired',
-            pairedAt: new Date()
-        }, { new: true });
-        if (!pair) {
-            throw new Error('Device pair record not found');
-        }
-        // Clean up ephemeral token from Redis
-        await db_1.redisClient.del(`pair_session:${sessionToken}`);
+        pairingDoc.status = 'paired';
+        pairingDoc.target_device = phoneDeviceId;
+        await pairingDoc.save();
+        // Create persistent paired session
+        const session = await Session_1.Session.create({
+            device_a: pairingDoc.initiator_device, // Chrome Extension
+            device_b: phoneDeviceId, // Mobile App
+            status: 'active',
+            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 day session
+        });
         return {
             success: true,
-            pairId,
-            extensionDeviceId,
-            mobileDeviceId,
-            pairSecret
+            sessionId: session._id.toString(),
+            extensionDeviceId: pairingDoc.initiator_device,
+            phoneDeviceId
         };
-    }
-    /**
-     * Authenticates a device connection attempt against MongoDB
-     */
-    static async validateDeviceAuth(pairId, deviceId, pairSecret, role) {
-        const pair = await DevicePair_1.DevicePair.findOne({ pairId, pairSecret, status: 'paired' });
-        if (!pair)
-            return false;
-        if (role === 'extension') {
-            return pair.extensionDeviceId === deviceId;
-        }
-        else {
-            return pair.mobileDeviceId === deviceId;
-        }
     }
 }
 exports.PairingService = PairingService;
