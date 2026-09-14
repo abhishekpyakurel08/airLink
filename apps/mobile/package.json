@@ -1,0 +1,16 @@
+{
+  "name": "@airlink/mobile",
+  "version": "1.0.0",
+  "description": "AirLink Expo React Native Mobile App",
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start"
+  },
+  "dependencies": {
+    "@airlink/shared": "file:../../packages/shared"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "private": true
+}

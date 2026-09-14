@@ -1,0 +1,16 @@
+{
+  "name": "@airlink/extension",
+  "version": "1.0.0",
+  "description": "airLink Chrome Extension (Manifest V3)",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@airlink/shared": "file:../shared"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.260",
+    "@types/node": "^20.11.24",
+    "typescript": "^5.3.3"
+  }
+}

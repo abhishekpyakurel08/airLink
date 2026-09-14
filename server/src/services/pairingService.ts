@@ -1,0 +1,112 @@
+import { v4 as uuidv4 } from 'uuid';
+import { redisClient } from '../config/db';
+import { DevicePair } from '../models/DevicePair';
+import { InitPairingResponse, ConfirmPairingResponse } from '@airlink/shared';
+
+const PAIR_SESSION_TTL = 300; // 5 minutes
+
+export class PairingService {
+  /**
+   * Initializes a QR code pairing session for a Chrome Extension device
+   */
+  static async initPairing(extensionDeviceId: string, serverUrl: string): Promise<InitPairingResponse> {
+    const pairId = uuidv4();
+    const sessionToken = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const pairSecret = uuidv4();
+
+    const sessionData = {
+      pairId,
+      extensionDeviceId,
+      pairSecret
+    };
+
+    // Store ephemeral session in Redis with TTL
+    await redisClient.set(
+      `pair_session:${sessionToken}`,
+      JSON.stringify(sessionData),
+      'EX',
+      PAIR_SESSION_TTL
+    );
+
+    // Persist pending device pair entry in MongoDB
+    await DevicePair.create({
+      pairId,
+      extensionDeviceId,
+      pairSecret,
+      status: 'pending'
+    });
+
+    const qrPayload = JSON.stringify({
+      pairId,
+      sessionToken,
+      serverUrl
+    });
+
+    return {
+      sessionToken,
+      pairId,
+      qrPayload,
+      expiresInSeconds: PAIR_SESSION_TTL
+    };
+  }
+
+  /**
+   * Confirms pairing when mobile app scans QR code and sends sessionToken
+   */
+  static async confirmPairing(
+    sessionToken: string,
+    mobileDeviceId: string
+  ): Promise<ConfirmPairingResponse> {
+    const rawData = await redisClient.get(`pair_session:${sessionToken}`);
+    if (!rawData) {
+      throw new Error('Invalid or expired QR pairing session token');
+    }
+
+    const { pairId, extensionDeviceId, pairSecret } = JSON.parse(rawData);
+
+    // Update MongoDB status
+    const pair = await DevicePair.findOneAndUpdate(
+      { pairId },
+      {
+        mobileDeviceId,
+        status: 'paired',
+        pairedAt: new Date()
+      },
+      { new: true }
+    );
+
+    if (!pair) {
+      throw new Error('Device pair record not found');
+    }
+
+    // Clean up ephemeral token from Redis
+    await redisClient.del(`pair_session:${sessionToken}`);
+
+    return {
+      success: true,
+      pairId,
+      extensionDeviceId,
+      mobileDeviceId,
+      pairSecret
+    };
+  }
+
+  /**
+   * Authenticates a device connection attempt against MongoDB
+   */
+  static async validateDeviceAuth(
+    pairId: string,
+    deviceId: string,
+    pairSecret: string,
+    role: 'extension' | 'mobile'
+  ): Promise<boolean> {
+    const pair = await DevicePair.findOne({ pairId, pairSecret, status: 'paired' });
+    if (!pair) return false;
+
+    if (role === 'extension') {
+      return pair.extensionDeviceId === deviceId;
+    } else {
+      return pair.mobileDeviceId === deviceId;
+    }
+  }
+}

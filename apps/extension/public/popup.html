@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>AirLink Remote</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      width: 320px;
+      margin: 0;
+      padding: 16px;
+      background: #0f172a;
+      color: #f8fafc;
+      text-align: center;
+    }
+    h2 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      color: #38bdf8;
+    }
+    .card {
+      background: #1e293b;
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      margin-bottom: 12px;
+    }
+    canvas {
+      border-radius: 8px;
+      margin: 8px 0;
+    }
+    .token-text {
+      font-family: monospace;
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #38bdf8;
+      letter-spacing: 4px;
+      margin: 6px 0;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+    .status-pending { background: #f59e0b; color: #fff; }
+    .status-connected { background: #22c55e; color: #fff; }
+    button {
+      background: #0284c7;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      width: 100%;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h2>📡 AirLink Remote</h2>
+
+  <div class="card">
+    <div id="token-display" class="token-text">------</div>
+    <canvas id="qr-canvas" width="200" height="200"></canvas>
+    <div id="status-badge" class="status-badge status-pending">Generating 60s QR Token...</div>
+  </div>
+
+  <button id="btn-refresh">Generate New QR Code</button>
+
+  <script src="../dist/popup/popup.js"></script>
+</body>
+</html>
